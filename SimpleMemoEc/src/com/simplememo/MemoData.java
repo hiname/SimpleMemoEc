@@ -46,7 +46,7 @@ public class MemoData {
 		for(String loadLine : loadLineList)
 			dataPack += loadLine + "\n";
 		if (dataPack.length() > 2)
-			dataPack = dataPack.substring(0, dataPack.length() - 2);
+			dataPack = dataPack.substring(0, dataPack.length() - 1);
 
 		Log.d("d", "load_dataPack : " + dataPack);
 		String dataList[] = dataPack.split(memoSpliter);
