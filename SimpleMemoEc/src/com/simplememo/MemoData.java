@@ -3,13 +3,13 @@ package com.simplememo;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Environment;
+import android.text.format.DateFormat;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 
 /**
  * Created by USER on 2016-11-28.
@@ -20,20 +20,29 @@ public class MemoData {
 	private static class Singleton {
 		private static MemoData instance = new MemoData();
 	}
+	
+	public static MemoData getInstance() {
+		return Singleton.instance;
+	}
 
 	// String saveFileName = "spf";
-	SharedPreferences spf;
+	// SharedPreferences spf;
 	String dataPackKey = "dataPackKey";
-	// String memoSpliter = "sd";
-	String memoSpliter = "\n#newline#\n";
+	public static final String TAG_MEMO_SPLITER = "\n#mSplit#\n";
 	boolean isInitLoad = false;
-	Context context;
+	// Context context;
 
 	String saveDir = Environment.getExternalStorageDirectory() + "/simplememo";
-	String saveFileName = "save.txt";
+	String saveFileName = "fileToSave.txt";
 	String saveFileFullPath = saveDir + "/" + saveFileName;
 
-	public void load() {
+	ListUpdate listUpdate;
+
+	public void setListUpdate(ListUpdate listUpdate) {
+		this.listUpdate = listUpdate;
+	}
+
+	public void loadByFile() {
 		File file = new File(saveFileFullPath);
 		if (!file.exists()) {
 			new File(saveDir).mkdirs();
@@ -48,46 +57,42 @@ public class MemoData {
 		if (dataPack.length() > 2)
 			dataPack = dataPack.substring(0, dataPack.length() - 1);
 
-		Log.d("d", "load_dataPack : " + dataPack);
-		String dataList[] = dataPack.split(memoSpliter);
-		for (String data : dataList) add(data);
+		addMemoData(dataPack);
+	}
+	
+	public void addMemoData(String dataPack) {
+		for (String data : dataPack.split(TAG_MEMO_SPLITER)) { 
+			add(data);
+		}
 	}
 
-	public void save() {
-//		Log.d("d", "save()");
+	public void saveInFile() {
 		String dataPack = toDataPack();
 //		SharedPreferences.Editor ed = spf.edit();
 //		ed.putString(dataPackKey, dataPack);
 //		ed.commit();
 
-		Log.d("d", "save()");
 		FileMgr.saveFileText(saveFileFullPath, dataPack, FileMgr.ENC_UTF8, false);
+		FileMgr.saveFileText(saveDir + "/backup/back" + new SimpleDateFormat("yy-MM-dd HH;mm;ss").format(new Date()) + ".txt" , dataPack, FileMgr.ENC_UTF8, false);
 	}
 
 	public String toDataPack() {
 		String dataPack = "";
 		for (String data : arrayList) {
-			dataPack += data + memoSpliter;
-			Log.d("d", "dataPackStack : " + dataPack);
-			Log.d("d", "└ memoSpliter : " + memoSpliter);
+			dataPack += data + TAG_MEMO_SPLITER;
 		}
-		if (dataPack.length() > memoSpliter.length()) {
-			dataPack = dataPack.substring(0, dataPack.length() - memoSpliter.length());
+		if (dataPack.length() > TAG_MEMO_SPLITER.length()) {
+			dataPack = dataPack.substring(0, dataPack.length() - TAG_MEMO_SPLITER.length());
 		}
-		Log.d("d", "toDatPack_dataPack : " + dataPack);
 		return dataPack;
 	}
 
-	public static MemoData getInstance() {
-		return Singleton.instance;
-	}
-
 	public void setContext(Context context) {
-		this.context = context;
-		spf = context.getSharedPreferences(saveFileName, Context.MODE_PRIVATE);
+		// this.context = context;
+		// spf = context.getSharedPreferences(saveFileName, Context.MODE_PRIVATE);
 		if (!isInitLoad) {
 			isInitLoad = true;
-			load();
+			loadByFile();
 		}
 	}
 
@@ -115,8 +120,24 @@ public class MemoData {
 		return nowSelect;
 	}
 
-	public void add(String str) {
-		arrayList.add(str);
+	String dateTimeFormatPattern = "yy-MM-dd HH:mm:ss";
+	SimpleDateFormat dateTimeFormat = new SimpleDateFormat(dateTimeFormatPattern);
+
+	public void addBlank() {
+		add("blank");
+	}
+
+	public static final String TAG_CREATE_DATE_TIME = "#create#";
+	public static final String TAG_MODIFY_DATE_TIME = "#modify#";
+
+	public void add(String inputStr) {
+		Log.d("d", "add str : " + inputStr);
+		String memoInfo = "";
+		if (!inputStr.contains(TAG_CREATE_DATE_TIME)) {
+			memoInfo = generateCreateDateTime() + generateModifyDateTime();
+		}
+
+		arrayList.add(inputStr + TAG_MEMO_END + memoInfo);
 	}
 
 	public int getSize() {
@@ -127,28 +148,49 @@ public class MemoData {
 		arrayList.remove(idx);
 	}
 
+	public static final String TAG_MEMO_END = "#memoEnd#";
+
 	public void set(int idx, String str) {
-		arrayList.set(idx, str);
+		String getInfoData = get(idx).split(TAG_MEMO_END)[1];
+		String modify = TAG_MODIFY_DATE_TIME + StringMgr.extTagData(getInfoData, TAG_MODIFY_DATE_TIME) + TAG_MODIFY_DATE_TIME;
+		getInfoData = getInfoData.replace(modify, generateModifyDateTime());
+		arrayList.set(idx, str + TAG_MEMO_END + getInfoData);
+	}
+
+	public String generateCreateDateTime() {
+		return TAG_CREATE_DATE_TIME + dateTimeFormat.format(new Date()) + TAG_CREATE_DATE_TIME;
+	}
+	
+	public String generateModifyDateTime() {
+		return TAG_MODIFY_DATE_TIME + dateTimeFormat.format(new Date()) + TAG_MODIFY_DATE_TIME;
 	}
 
 	public String get(int idx) {
 		return arrayList.get(idx);
 	}
 
-	int titleLen = 15;
+	public String getMemo(int idx) {
+		return arrayList.get(idx).split(TAG_MEMO_END)[0];
+	}
+
+	public String getInfo(int idx) {
+		return arrayList.get(idx).split(TAG_MEMO_END)[1];
+	}
+
+	int titleLen = 8;
 
 	public String[] getTitles() {
 		int size = arrayList.size();
 		if (size <= 0) return null;
 		String[] titles = new String[size];
 		for (int i = 0; i < size; i++) {
-			String nowMemo = arrayList.get(i);
-			if (nowMemo.length() > 2 && nowMemo.contains("\n")) {
-				nowMemo = nowMemo.split("\n")[0] + "...";
-			}
+			String nowMemo = getMemo(i);
 			if (nowMemo.length() > titleLen) {
 				nowMemo = nowMemo.substring(0, titleLen) + "...";
+			} else if (nowMemo.length() > 2 && nowMemo.contains("\n")) {
+				nowMemo = nowMemo.split("\n")[0] + "...";
 			}
+
 			titles[i] = nowMemo;
 		}
 		return titles;
@@ -158,10 +200,37 @@ public class MemoData {
 		arrayList.clear();
 	}
 
-	public String getNowSelectData() {
-		if (nowSelect == -1 || getSize() <= 0)
+	public String getNowSelectMemo() {
+		int size = getSize();
+		if (nowSelect == -1 || size == 0 || size <= nowSelect)
 			return null;
-		return arrayList.get(nowSelect);
+		return getMemo(nowSelect);
+	}
+
+	public String getNowSelectCreateDateTime() {
+		int size = getSize();
+		if (nowSelect == -1 || size == 0 || size <= nowSelect)
+			return null;
+
+		return getCreateDateTime(nowSelect);
+	}
+
+	public String getNowSelectModifyDateTime() {
+		int size = getSize();
+		if (nowSelect == -1 || size == 0 || size <= nowSelect)
+			return null;
+
+		return getModifyDateTime(nowSelect);
+	}
+
+	public String getCreateDateTime(int idx) {
+		String info = getInfo(idx);
+		return StringMgr.extTagData(info, TAG_CREATE_DATE_TIME);
+	}
+
+	public String getModifyDateTime(int idx) {
+		String info = getInfo(idx);
+		return StringMgr.extTagData(info, TAG_MODIFY_DATE_TIME);
 	}
 
 	public void setNowSelect(int idx) {
@@ -169,7 +238,58 @@ public class MemoData {
 	}
 
 	public void setNowData(String str) {
-		Log.d("d", "setNowData : " + nowSelect + ", " + str);
 		set(nowSelect, str);
+	}
+
+	public static final String DB_URL = "http://hihost.dothome.co.kr/SimpleMemo";
+	private final HttpPost httpPost = new HttpPost(DB_URL);
+
+	public void dbInsertMemoData(String varQuery) {
+		String chArr = toCharCode(varQuery);
+		httpPost.insert("memo=" + chArr);
+	}
+
+	public void dbDeleteMemoData(String id) {
+		httpPost.delete("id=" + id);
+	}
+
+	private String toCharCode(String str) {
+		char[] charCodeArr = str.toCharArray();
+		String charCodePack = Integer.toString((int) charCodeArr[0]);
+
+		for (int i = 1; i < charCodeArr.length; i++) {
+			charCodePack += "," + (int) charCodeArr[i];
+		}
+
+		return charCodePack;
+	}
+
+	public String dbSelectOrigin() {
+		return httpPost.selectAllOrigin();
+	}
+
+	public String[] dbGetColNameList() {
+		String colNameJson = httpPost.getColNameList();
+		return httpPost.colNameJsonToArray(colNameJson);
+	}
+
+	public String[][] dbSelectAllArray() {
+		return httpPost.selectAllJsonToArray(httpPost.selectAllOrigin());
+	}
+
+	public String[][] dbSelectAllArrayCharToStr() {
+		String[][] array = httpPost.selectAllJsonToArray(httpPost.selectAllOrigin());
+		for (int i = 0; i < array.length; i++) {
+			array[i][2] = toStr(array[i][2]);
+		}
+		return array;
+	}
+
+	private String toStr(String charCodePack) {
+		String str = "";
+		for (String charCode : charCodePack.split(",")) {
+			str += (char)Integer.parseInt(charCode);
+		}
+		return str;
 	}
 }

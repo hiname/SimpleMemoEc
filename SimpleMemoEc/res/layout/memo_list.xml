@@ -2,16 +2,17 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
+              android:background="@drawable/bg"
               android:orientation="vertical"
-              android:padding="10dp"
-              android:background="@drawable/bg">
+              android:padding="10dp">
 
     <ListView
         android:id="@+id/listView1"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="0.8"
-        android:listSelector="@android:color/transparent">
+
+        >
     </ListView>
 
     <LinearLayout
@@ -20,10 +21,24 @@
         android:layout_weight="0.2">
 
         <Button
+            android:id="@+id/btnServerSave"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="서버에 저장"/>
+
+        <Button
+            android:id="@+id/btnServerLoad"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="서버에서 불러오기"/>
+
+        <Button
             android:id="@+id/btnAddMemo"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:text="추가"/>
+            android:text="메모 추가"/>
     </LinearLayout>
 </LinearLayout>
