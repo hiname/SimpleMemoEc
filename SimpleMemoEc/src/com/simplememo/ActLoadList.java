@@ -22,20 +22,15 @@ import java.util.Arrays;
 public class ActLoadList extends Activity {
 
 	ListView lvLoadList;
+	ArrayList<String> mainArrayList;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.load_list);
 		lvLoadList = (ListView) findViewById(R.id.lvLoadList);
-
-		final ArrayList<String> memoDataList = loadDbMemoDataList();
-		String print = "";
-		for (String str : memoDataList) print += str + "\n";
-		Log.d("d", "print : " + print);
-		ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(this, R.layout.list_element, memoDataList);
-		Log.d("d", "arrayAdapter : " + arrayAdapter);
-		lvLoadList.setAdapter(arrayAdapter);
+		reloadMainList();
+		//
 		lvLoadList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -45,7 +40,7 @@ public class ActLoadList extends Activity {
 				// final String dbSelMemoData = dbSelData.split(" / ")[2];				// 
 				// Log.d("d", dbSelData);
 				
-				final String dbSelMemoData = memoDataList.get(selPos);
+				final String dbSelMemoData = mainArrayList.get(selPos).split(":", 2)[1];
 				
 				AlertDialog.Builder builder = new AlertDialog.Builder(ActLoadList.this);
 				builder
@@ -87,11 +82,10 @@ public class ActLoadList extends Activity {
 			@Override
 			public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
 				final int selPos = position;
-				final String getFullData = memoDataList.get(selPos);
-				final String getId = getFullData.split(" / ")[0];
-				final String getMemoData = getFullData.split(" / ")[2];
-				// Toast.makeText(ActLoadList.this, getFullData, Toast.LENGTH_SHORT).show();
-				Log.d("d", getFullData);
+				final String getFullData = mainArrayList.get(selPos);
+				String[] dbIdAndMemo = getFullData.split(":", 2);
+				final String getId = dbIdAndMemo[0];
+				final String getMemoData = dbIdAndMemo[1];
 
 				AlertDialog.Builder builder = new AlertDialog.Builder(ActLoadList.this);
 				builder
@@ -102,7 +96,7 @@ public class ActLoadList extends Activity {
 									@Override
 									public void onClick(DialogInterface dialog, int which) {
 										memoData.dbDeleteMemoData(getId);
-										finish();
+										reloadMainList();
 									}
 								})
 						.setNegativeButton("취소",
@@ -122,13 +116,20 @@ public class ActLoadList extends Activity {
 
 	MemoData memoData = MemoData.getInstance();
 
-	private ArrayList<String> loadDbMemoDataList() {
+	private ArrayList<String> loadDbIdAndMemoDataList() {
 		final ArrayList<String> dataList = new ArrayList<String>();
 		String[][] dbAllDataList = memoData.dbSelectAllArrayCharToStr();
 		for (int i = 0; i < dbAllDataList.length; i++) {
-			// dataList.add(dbAllDataList[i][0] + " / " + dbAllDataList[i][1] + " / " + dbAllDataList[i][2]);
-			dataList.add(dbAllDataList[i][2]);
+			dataList.add(dbAllDataList[i][0] + ":" + dbAllDataList[i][2]);
 		}
 		return dataList;
+	}
+
+
+	private void reloadMainList() {
+		mainArrayList = loadDbIdAndMemoDataList();
+		ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(this, R.layout.list_element, mainArrayList);
+		lvLoadList.setAdapter(arrayAdapter);
+		arrayAdapter.notifyDataSetChanged();
 	}
 }

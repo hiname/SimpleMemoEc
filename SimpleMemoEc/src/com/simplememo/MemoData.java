@@ -33,7 +33,7 @@ public class MemoData {
 	// Context context;
 
 	String saveDir = Environment.getExternalStorageDirectory() + "/simplememo";
-	String saveFileName = "fileToSave.txt";
+	String saveFileName = "saveMemoData.txt";
 	String saveFileFullPath = saveDir + "/" + saveFileName;
 
 	ListUpdate listUpdate;
