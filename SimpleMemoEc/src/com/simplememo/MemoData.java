@@ -15,7 +15,12 @@ import java.util.Date;
  * Created by USER on 2016-11-28.
  */
 public class MemoData {
-	private MemoData() {}
+	private MemoData() {
+		if (!isInitLoad) {
+			isInitLoad = true;
+			loadByFile();
+		}
+	}
 
 	private static class Singleton {
 		private static MemoData instance = new MemoData();
@@ -85,15 +90,6 @@ public class MemoData {
 			dataPack = dataPack.substring(0, dataPack.length() - TAG_MEMO_SPLITER.length());
 		}
 		return dataPack;
-	}
-
-	public void setContext(Context context) {
-		// this.context = context;
-		// spf = context.getSharedPreferences(saveFileName, Context.MODE_PRIVATE);
-		if (!isInitLoad) {
-			isInitLoad = true;
-			loadByFile();
-		}
 	}
 
 	private ArrayList<String> arrayList = new ArrayList<String>();
