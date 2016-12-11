@@ -10,6 +10,9 @@ import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -17,6 +20,9 @@ public class ActNowMemo extends Activity {
 	private EditText editText1;
 	private MemoData memoData = MemoData.getInstance();
 	private TextView tvCreateDateTime, tvModifyDateTime;
+	private FrameLayout flHistoryCount;
+	private ImageView ivHistoryCount;
+	private TextView tvHistoryCount;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -26,12 +32,24 @@ public class ActNowMemo extends Activity {
 		editText1.setSingleLine(false);
 		tvCreateDateTime = (TextView) findViewById(R.id.tvCreateDateTime);
 		tvModifyDateTime = (TextView) findViewById(R.id.tvModifyDateTime);
+		//
+		flHistoryCount = (FrameLayout) findViewById(R.id.flHistoryCount);
+		ivHistoryCount = (ImageView) findViewById(R.id.ivHistoryCount);
+		tvHistoryCount = (TextView) findViewById(R.id.tvHistoryCount);
 		// editText1.setSingleLine(false);
 		if (memoData.getNowMode().equals(MemoData.MODE_EDIT)) {
-			editText1.setText(memoData.getNowSelectMemo());
 			// editText1.setFocusable(true);
 			tvCreateDateTime.setText("만든시간 : " + memoData.getNowSelectCreateDateTime());
 			tvModifyDateTime.setText("수정시간 : " + memoData.getNowSelectModifyDateTime());
+			if (memoData.getNowSelectHistoryCount() > 0) {
+				flHistoryCount.setOnClickListener(new View.OnClickListener() {
+					@Override
+					public void onClick(View v) {
+						memoData.setNowMode(MemoData.MODE_HISTORY_LIST);
+						startActivity(new Intent(ActNowMemo.this, ActHistoryList.class));
+					}
+				});
+			}
 			final int getInptType = editText1.getInputType();
 			editText1.setVisibility(View.INVISIBLE);
 			editText1.setInputType(InputType.TYPE_NULL);
@@ -49,13 +67,13 @@ public class ActNowMemo extends Activity {
 			});
 		}
 
-		findViewById(R.id.btnSave).setOnClickListener(new View.OnClickListener() {
+		findViewById(R.id.llSave).setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
 				setMemo();
 			}
 		});
-		findViewById(R.id.btnSaveAndFin).setOnClickListener(new View.OnClickListener() {
+		findViewById(R.id.llSaveAndFin).setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
 				setMemo();
@@ -63,8 +81,8 @@ public class ActNowMemo extends Activity {
 			}
 		});
 
-		final Button btnSendDB = (Button) findViewById(R.id.btnSendDB);
-		btnSendDB.setOnClickListener(new View.OnClickListener() {
+		final LinearLayout llSendDB = (LinearLayout) findViewById(R.id.llSendDB);
+		llSendDB.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
 				final String inputStr = editText1.getText().toString();
@@ -73,7 +91,7 @@ public class ActNowMemo extends Activity {
 					@Override
 					protected void onPreExecute() {
 						super.onPreExecute();
-						btnSendDB.setEnabled(false);
+						llSendDB.setEnabled(false);
 					}
 
 					@Override
@@ -85,12 +103,22 @@ public class ActNowMemo extends Activity {
 					@Override
 					protected void onPostExecute(Void aVoid) {
 						super.onPostExecute(aVoid);
-						btnSendDB.setEnabled(true);
+						llSendDB.setEnabled(true);
 						Toast.makeText(ActNowMemo.this, "전송 됐습니다.\n→" + inputStr + "←", Toast.LENGTH_SHORT).show();
 					}
 				}.execute();
 			}
 		});
+	}
+
+	@Override
+	protected void onStart() {
+		super.onStart();
+		if (memoData.getNowMode().equals(MemoData.MODE_EDIT) || memoData.getNowMode().equals(MemoData.MODE_HISTORY_LIST)) {
+			editText1.setText(memoData.getNowSelectMemo());
+			tvHistoryCount.setText("내역 수 : " + memoData.getNowSelectHistoryCount());
+			flHistoryCount.setVisibility(View.VISIBLE);
+		}
 	}
 
 	private void keyBoardHide() {
@@ -112,7 +140,7 @@ public class ActNowMemo extends Activity {
 		String inputMemo = editText1.getText().toString();
 		String diffMemo = inputMemo.replace(originalMemo, "");
 
-		memoData.setNowData(inputMemo);
+		memoData.modifyNowData(inputMemo);
 		memoData.saveInFile();
 
 		Toast.makeText(ActNowMemo.this, "저장 됐습니다.\n→" + diffMemo + "←", Toast.LENGTH_SHORT).show();
@@ -126,7 +154,7 @@ public class ActNowMemo extends Activity {
 		if (!inputStr.equals("")
 				&& !inputStr.equals(memoData.getNowSelectMemo()))
 			setMemo();
-		finish();
+		// finish();
 	}
 
 	@Override

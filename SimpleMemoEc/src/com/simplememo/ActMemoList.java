@@ -4,13 +4,14 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -19,19 +20,18 @@ public class ActMemoList extends Activity implements ListUpdate{
 	private final String TAG_CLASS_NAME = ActMemoList.this.getClass().getSimpleName();
 
 	MemoData memoData = MemoData.getInstance();
-	ListView listView1;
+	ListView lvMemoList;
 	ArrayAdapter arrayAdapter;
 	// int nowSelect = -1;
-
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		Log.d(TAG_CLASS_NAME, new Exception().getStackTrace()[0].getMethodName());
+		Debug.d("start");
 		// memoData.setContext(this);
 		setContentView(R.layout.memo_list);
-		listView1 = (ListView) findViewById(R.id.listView1);
-		listView1.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+		lvMemoList = (ListView) findViewById(R.id.listView1);
+		lvMemoList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 				memoData.setNowSelect(position);
@@ -41,7 +41,7 @@ public class ActMemoList extends Activity implements ListUpdate{
 			}
 		});
 
-		listView1.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+		lvMemoList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
 			@Override
 			public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
 				final int selPos = position;
@@ -53,7 +53,7 @@ public class ActMemoList extends Activity implements ListUpdate{
 								new DialogInterface.OnClickListener() {
 									@Override
 									public void onClick(DialogInterface dialog, int which) {
-										memoData.remove(selPos);
+										memoData.removeMemo(selPos);
 										reloadList();
 									}
 								})
@@ -70,63 +70,51 @@ public class ActMemoList extends Activity implements ListUpdate{
 			}
 		});
 
-		findViewById(R.id.btnAddMemo).setOnClickListener(new View.OnClickListener() {
+		findViewById(R.id.llAddMemo).setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
 				startActivity(new Intent(ActMemoList.this, ActAddNowMemoStart.class));
 			}
 		});
 
-		findViewById(R.id.btnServerSave).setOnClickListener(new View.OnClickListener() {
+		final LinearLayout llServerSave = (LinearLayout) findViewById(R.id.llServerSave);
+		llServerSave.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				new AsyncTask<Object, Object, Object>() {
-					@Override
-					protected Object doInBackground(Object... params) {
-						return null;
-					}
-				};
+				llServerSave.setEnabled(false);
+
+				String memoDataPack = memoData.getMemoDataPack();
+				String historyDataPack = memoData.getHistoryDataPack();
+
+				String dataPack = MemoData.TAG_MEMO_DATA + memoDataPack + MemoData.TAG_MEMO_DATA;
+				dataPack += MemoData.TAG_HISTORY + historyDataPack + MemoData.TAG_HISTORY;
+
+				memoData.dbInsertMemoData(dataPack);
+				String titleList = arrayAdapter.getItem(0).toString();
+				for (int i = 1; i < arrayAdapter.getCount(); i++)
+					titleList += "\n" + arrayAdapter.getItem(i).toString();
+
+				Toast.makeText(ActMemoList.this, "모두 전송 됐습니다.\n→" + titleList + "←", Toast.LENGTH_SHORT).show();
+
+				llServerSave.setEnabled(true);
 			}
 		});
 
-		final Button btnServerSave = (Button) findViewById(R.id.btnServerSave);
-		btnServerSave.setOnClickListener(new View.OnClickListener() {
+		findViewById(R.id.llServerLoad).setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				final String dataPack = memoData.toDataPack();
-				new AsyncTask<Void, Void, Void>() {
-					@Override
-					protected void onPreExecute() {
-						super.onPreExecute();
-						btnServerSave.setEnabled(false);
-					}
-
-					@Override
-					protected Void doInBackground(Void... params) {
-						memoData.dbInsertMemoData(dataPack);
-						return null;
-					}
-
-					@Override
-					protected void onPostExecute(Void aVoid) {
-						super.onPostExecute(aVoid);
-						btnServerSave.setEnabled(true);
-						Toast.makeText(ActMemoList.this, "모두 전송 됐습니다.\n→" + dataPack + "←", Toast.LENGTH_SHORT).show();
-					}
-				}.execute();
-			}
-		});
-
-		final Button btnServerLoad = (Button) findViewById(R.id.btnServerLoad);
-		btnServerLoad.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				startActivity(new Intent(ActMemoList.this, ActLoadList.class));
+				startActivity(new Intent(ActMemoList.this, ActDBList.class));
 			}
 		});
 
 		reloadList();
 
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+
+		return super.onCreateOptionsMenu(menu);
 	}
 
 	@Override
@@ -136,30 +124,37 @@ public class ActMemoList extends Activity implements ListUpdate{
 
 	@Override
 	public void reloadList() {
-		Log.d(TAG_CLASS_NAME, new Exception().getStackTrace()[0].getMethodName());
-		String[] memoTitles = memoData.getTitles();
+		Debug.d("reload");
+		String[] memoTitles = memoData.getMemoTitles();
 		if (memoTitles == null)
 			memoTitles = new String[0];
 		arrayAdapter = new ArrayAdapter(this, R.layout.list_element, memoTitles);
-		listView1.setAdapter(arrayAdapter);
+		lvMemoList.setAdapter(arrayAdapter);
 		arrayAdapter.notifyDataSetChanged();
+		Debug.d(
+				"memoTitles.len : " + memoTitles.length + "\n"
+				+ "lvMemoList.getCount() : " + lvMemoList.getCount()
+		);
+
 	}
 
 	@Override
 	protected void onResume() {
-		Log.d(TAG_CLASS_NAME, new Exception().getStackTrace()[0].getMethodName());
+		Debug.d("resume");
 		super.onResume();
 		reloadList();
 	}
 
 	@Override
 	protected void onPause() {
+		Debug.d("pause");
 		memoData.saveInFile();
 		super.onPause();
 	}
 
 	@Override
 	protected void onDestroy() {
+		Debug.d("destory");
 		super.onDestroy();
 		Log.d(TAG_CLASS_NAME, new Exception().getStackTrace()[0].getMethodName());
 	}
